@@ -1,0 +1,19 @@
+columns format version: 1
+17 columns:
+`id` Decimal(38, 19)
+`deleted` Nullable(Decimal(38, 19))
+`type` String
+`by` Nullable(String)
+`time` Nullable(DateTime64(6))
+`text` Nullable(String)
+`dead` Nullable(Decimal(38, 19))
+`parent` Nullable(Decimal(38, 19))
+`poll` Nullable(Decimal(38, 19))
+`kids` Array(Nullable(String))
+`url` Nullable(String)
+`score` Nullable(Decimal(38, 19))
+`title` Nullable(String)
+`parts` Array(Nullable(String))
+`descendants` Nullable(Decimal(38, 19))
+`_sign` Int8
+`_version` UInt64

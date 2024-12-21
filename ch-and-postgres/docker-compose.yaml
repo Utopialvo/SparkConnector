@@ -1,0 +1,37 @@
+version: '3'
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server
+    container_name: clickhouse
+    hostname: clickhouse
+    volumes:
+      - ./fs/volumes/clickhouse/etc/clickhouse-server/config.d/config.xml:/etc/clickhouse-server/config.d/config.xml
+      - ./fs/volumes/clickhouse/etc/clickhouse-server/users.d/users.xml:/etc/clickhouse-server/users.d/users.xml
+      - ./fs/volumes/clickhouse/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - ./fs/volumes/clickhouse/var/lib/clickhouse/:/var/lib/clickhouse/
+      - ./fs/volumes/clickhouse/var/log/clickhouse-server/:/var/log/clickhouse-server/
+    environment:
+      - CLICKHOUSE_USER=utopialvo
+      - CLICKHOUSE_PASSWORD=utopialvo
+    ports:
+      - "0.0.0.0:8123:8123"
+      - "0.0.0.0:9000:9000"
+    depends_on:
+      - postgres
+  postgres:
+    container_name: postgres
+    hostname: postgres
+    image: postgres
+    environment:
+      POSTGRES_USER: utopialvo
+      POSTGRES_PASSWORD: utopialvo
+      POSTGRES_DB: clickhouse_pg_db
+    ports:
+      - "0.0.0.0:5432:5432"
+    volumes:
+      - ./fs/volumes/postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - ./data:/var/lib/postgresql/data
+    command:
+      - "postgres"
+      - "-c"
+      - "wal_level=logical"
