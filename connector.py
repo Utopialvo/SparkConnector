@@ -19,6 +19,37 @@ import pyspark.sql.types as T
 class spark_connector:
     """
     Класс стандартного подключения к Spark
+
+    exec_inst - количество контейнеров
+    exec_cores - количество ядер в контейнере
+    aloc_max - максимальное количество ядер для dynamic_allocation (если он вкл)
+    memory_exec - количество памяти в контейнере
+    name - название подключения для упрощения логгирования подключений в кластере
+    rootdir - корневая папка в HDFS 
+    enable_graphframes - включить работу с graphframes
+    enable_clickhouse - включить работу с clickhouse
+    enable_postgres - включить работу с postgres
+    dynamic_allocation - включить динамическое выделение ресурсов
+    intensive_mode - включить мод с быстрой очисткой памяти (нужно тюнить параметры для конкретных случаев)
+    marshal_mode - подключить Marshal Serializer вместо Kryo Serializer
+
+
+    Для подключения (standalone, yarn, k8s) нужно модернизировать самостоятельно в зависимости от того, как был развернут кластер.
+    To Do:
+    spark.master=yarn
+    spark.deploy-mode=client
+
+    SPARK_HOME
+    JAVA_HOME
+    PYSPARK_DRIVER_PYTHON
+    PYSPARK_PYTHON
+    HADOOP_HOME=/usr/local/hadoop-2.7.3
+    HADOOP_CONF_HOME=/usr/local/hadoop-2.7.3/etc/hadoop
+    HADOOP_CONF_DIR=/usr/local/hadoop-2.7.3/etc/hadoop
+    HADOOP_PREFIX=/usr/local/hadoop-2.7.3
+    .remote("sc://<sc_host>:<sc_port>")
+
+    fair_scheduler.xml - можно меять под себя.
     """
     def __init__(self,
                  exec_inst: int = 100,
@@ -33,8 +64,7 @@ class spark_connector:
                  dynamic_allocation: bool = False,
                  intensive_mode: bool = False,
                  marshal_mode: bool = True) -> None:
-        """
-        """
+        
         os.environ['SPARK_MAJOR_VERSION'] = '3'
         os.environ['SPARK_HOME'] = '/usr/local/spark'
         os.environ['JAVA_HOME'] = '/usr/lib/jvm/java-1.17.0-openjdk-amd64'
