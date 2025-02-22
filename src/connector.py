@@ -7,6 +7,7 @@ import os
 import glob
 import sys
 import math
+from pathlib import Path
 
 from pyspark import SparkContext, SparkConf
 from pyspark.sql import SparkSession, DataFrame, Window
@@ -63,7 +64,8 @@ class spark_connector:
                  enable_postgres: bool = False,
                  dynamic_allocation: bool = False,
                  intensive_mode: bool = False,
-                 marshal_mode: bool = True) -> None:
+                 marshal_mode: bool = True,
+                 yarn: bool = True) -> None:
         
         os.environ['SPARK_MAJOR_VERSION'] = '3'
         os.environ['SPARK_HOME'] = '/usr/local/spark'
@@ -71,6 +73,9 @@ class spark_connector:
         os.environ['PYSPARK_DRIVER_PYTHON'] = sys.executable
         os.environ['PYSPARK_PYTHON'] = sys.executable
         os.environ['PYARROW_IGNORE_TIMEZONE'] = '1'
+
+        current_dir = Path(__file__).resolve().parent
+        
 
         if dynamic_allocation:
             aloc_max = int(aloc_max / exec_cores)
@@ -80,10 +85,11 @@ class spark_connector:
             spark_param_shuffle = int(exec_inst * exec_cores * 2.6)
         chkp = 'CheckpointDir/' + name
         name = name + '_' + str(datetime.datetime.now()).replace(' ', '_')
-        overhead = f'{int((memory_exec * 1024) * 0.10)}m'
+        overhead = f'{int((memory_exec * 1024) * 0.10)}m' 
+        master = 'yarn' if yarn else 'local[*]'
         conf = SparkConf()\
                 .setAppName(f'{name}')\
-                .setMaster('yarn')\
+                .setMaster(master)\
                 .set('spark.log.level', 'ERROR')\
                 .set('spark.executor.instances', exec_inst)\
                 .set('spark.executor.cores', exec_cores)\
@@ -94,8 +100,8 @@ class spark_connector:
                 .set('spark.driver.cores', 2)\
                 .set('spark.driver.memory', f'{memory_exec}g')\
                 .set('spark.driver.maxResultSize', f'{memory_exec}g')\
-                .set('spark.scheduler.mode', f'FAIR')\
-                .set('spark.scheduler.allocation.file', f'file://{glob.glob(f"{os.getcwd()}/fair*.xml")[0]}')\
+                .set('spark.scheduler.mode', 'FAIR')\
+                .set('spark.scheduler.allocation.file', f'file://{glob.glob(f"{current_dir}/fair*.xml")[0]}')\
                 .set('spark.sql.broadcastTimeout', '36000')\
                 .set('spark.hadoop.mapreduce.input.fileinputformat.input.dir.recursive', 'true')\
                 .set('spark.sql.catalogImplementation', 'hive')\
@@ -122,6 +128,7 @@ class spark_connector:
                 .set('spark.sql.parquet.compression.codec', 'snappy')\
                 .set('spark.sql.execution.arrow.pyspark.enabled', 'true')\
                 .set('spark.sql.execution.arrow.pyspark.fallback.enabled', 'true')\
+                .set('spark.sql.execution.arrow.pyspark.selfDestruct.enabled', 'true')\
                 .set('spark.rdd.compress', 'true')\
                 .set('spark.shuffle.compress', 'true')\
                 .set('spark.shuffle.spill.compress', 'true')\
@@ -148,11 +155,11 @@ class spark_connector:
         if enable_graphframes or enable_clickhouse or enable_postgres:
             jar_files = []
             if enable_graphframes:
-                jar_files.append(glob.glob(f'{os.getcwd()}/graphf*.jar')[0])
+                jar_files.append(glob.glob(f'{current_dir}/graphf*.jar')[0])
             if enable_clickhouse:
-                jar_files.append(glob.glob(f'{os.getcwd()}/clickhouse-jdbc*.jar')[0])
+                jar_files.append(glob.glob(f'{current_dir}/clickhouse-jdbc*.jar')[0])
             if enable_postgres:
-                jar_files.append(glob.glob(f'{os.getcwd()}/postgres*.jar')[0])
+                jar_files.append(glob.glob(f'{current_dir}/postgres*.jar')[0])
             conf = conf.set("spark.jars", ",".join(jar_files))
 
         if intensive_mode:
@@ -174,7 +181,7 @@ class spark_connector:
         self.home_dir = rootdir
 
         if enable_graphframes:
-            self.spark.sparkContext.addPyFile(glob.glob(f'{os.getcwd()}/graphf*.zip')[0])
+            self.spark.sparkContext.addPyFile(glob.glob(f'{current_dir}/graphf*.zip')[0])
 
 
     

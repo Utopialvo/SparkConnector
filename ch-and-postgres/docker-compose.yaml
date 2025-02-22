@@ -21,7 +21,7 @@ services:
   postgres:
     container_name: postgres
     hostname: postgres
-    image: postgres
+    image: postgres:17.2-alpine3.21
     environment:
       POSTGRES_USER: utopialvo
       POSTGRES_PASSWORD: utopialvo
