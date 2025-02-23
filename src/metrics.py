@@ -4,6 +4,8 @@ from pyspark.ml.evaluation import ClusteringEvaluator
 from pyspark.ml.feature import VectorAssembler
 from typing import Optional, Dict, List
 from pyspark.storagelevel import StorageLevel
+import numpy as np
+from concurrent.futures import ThreadPoolExecutor
 
 
 class Indices:
@@ -40,32 +42,57 @@ class Indices:
             self.num_clusters = centroids_df.select(self.centroid_cluster_col).distinct().count()
         else:
             self.num_clusters = num_clusters
-
+        
         # Глобальное среднее
-        self.global_means = df.select(*[F.avg(c).alias(c) for c in self.feature_columns]).first()
+        def func1():
+            self.global_means = df.select(*[F.avg(c).alias(c) for c in self.feature_columns]).first()
         
         # Размеры кластеров
-        self.cluster_sizes = df.groupBy(self.label_col).agg(F.count('*').alias('size'))
-        self.cluster_sizes.coalesce(1).persist(StorageLevel.MEMORY_ONLY).foreach(lambda x: x)
+        def func2():
+            self.cluster_sizes = df.groupBy(self.label_col).agg(F.count('*').alias('size'))
+            self.cluster_sizes.coalesce(1).persist(StorageLevel.MEMORY_ONLY).foreach(lambda x: x)
+
         
         # Количество объектов
-        self.n = df.count()
-        
+        def func3():
+            self.n = df.count()
+
         # WSS
-        self.wss = self._calculate_wss(df, centroids_df)
+        def func4():
+            self.wss = self._calculate_wss(df, centroids_df)
+
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            future1 = executor.submit(func1)
+            future2 = executor.submit(func2)
+            future3 = executor.submit(func3)
+            future4 = executor.submit(func4)
+            _ = future1.result()
+            _ = future2.result()
+            _ = future3.result()
+            _ = future4.result()
+        
         
         # BSS и Calinski-Harabasz
-        self.bss, self.calinski = self._calculate_calinski_harabasz(df, centroids_df, self.num_clusters)
-        
+        def func5():
+            self.bss, self.calinski = self._calculate_calinski_harabasz(df, centroids_df, self.num_clusters)
+
+        # Silhouette Score
+        def func6():
+            sampled_df = self._smart_sampling(df, sample_size, sample_frac, seed) if sample_size or sample_frac else df
+            self.silhouette = self._calculate_silhouette(sampled_df)
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            future5 = executor.submit(func5)
+            future6 = executor.submit(func6)
+            _ = future5.result()
+            _ = future6.result()
+
         # WB-index
         self.wb_index = self.wss / self.bss if self.bss != 0 else float('inf')
         
         # XU-index
-        self.xu_index = (self.wss / (self.n ** 2)) * num_clusters
+        self.xu_index = (self.wss * np.log(self.num_clusters)) / (self.n) + self.num_clusters * np.log(self.n) if self.num_clusters > 1 else 0.0
         
-        # Silhouette Score
-        sampled_df = self._smart_sampling(df, sample_size, sample_frac, seed) if sample_size or sample_frac else df
-        self.silhouette = self._calculate_silhouette(sampled_df)
 
         self.cluster_sizes.unpersist()
         return {
