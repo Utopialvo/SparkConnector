@@ -1,4 +1,4 @@
-# PysparkConnector, KNN (Classifier, Regressor) and HierarchicalClustering for Pyspark
+# PysparkConnector
 
 Мои наработки для Pyspark, которые требовались, но не были реализованы в исходной библиотеке.
 
